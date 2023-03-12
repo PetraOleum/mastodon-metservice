@@ -18,7 +18,7 @@ The bot can be run with `python3 mastodon-metservice.py` with no future argument
 */5 * * * * /home/petra/mastodon-metservice/venv/bin/python /home/petra/mastodon-metservice/mastodon-metservice.py --config=/home/petra/mastodon-metservice/config.json --dir="/home/petra/mastodon-metservice" >> /home/petra/weatherbot-log.txt 2>&1
 ```
 
-If run with `--debug` the bot will not connect to Mastodon or post but instead prints to stdout, and therefore does not need valid user credentials. However it still needs the[mastodon.py](https://mastodonpy.readthedocs.io/en/stable/index.html) package to be loaded.
+If run with `--debug` the bot will not connect to Mastodon or post but instead prints to stdout, and therefore does not need valid user credentials. However it still needs the [mastodon.py](https://mastodonpy.readthedocs.io/en/stable/index.html) package to be loaded.
 
 ## Configuration
 
@@ -33,7 +33,7 @@ The config file is at `config.json` although another file can be specified with 
 * `website_url`: URL to direct users for more information (currently unused, and instead taken from the feed for each individual alert)
 * `archive_file`: JSON file used to save the most recently updated information - currently only used for the list of guids for comparison with most recent rss load
 * `mastodon_server`: URL of the mastodon server the account is located on
-* `mastodon_cred`: file path to the user secret file for the bot; can also just contain the secret directly (not reccomended)
+* `mastodon_cred`: file path to the user secret file for the bot; can also just contain the secret directly (not recommended)
 * `visibility`: Post visibility on mastodon, one of 'public', 'unlisted', 'private', or 'direct'
 
 # Adapting
