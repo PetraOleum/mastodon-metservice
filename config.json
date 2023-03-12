@@ -1,0 +1,13 @@
+{
+    "shape_file": "lds-nz-coastlines-and-islands-polygons-topo-1500k-SHP.zip",
+    "tz": "Pacific/Auckland",
+    "wait": 5,
+    "full_map": "all.png",
+    "alert_map": "alert.png",
+    "rss_url": "https://alerts.metservice.com/cap/rss",
+    "website_url": "https://metservice.com/warnings/home",
+    "archive_file": "archive.json",
+    "mastodon_server": "https://botsin.space",
+    "mastodon_cred": "nzweather_usercred.secret",
+    "visibility": "direct"
+}
