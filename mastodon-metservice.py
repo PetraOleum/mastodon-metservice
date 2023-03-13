@@ -286,20 +286,23 @@ def main(config, debug=False):
         bottz = gettz("UTC")
     now_time = dt.datetime.now().astimezone(bottz)
     rss_root = load_rss(cap_url)
-    rss_items = rss_root.find('channel').findall('item')
-    items_parsed = [parse_item(item) for item in rss_items]
-    items_guid = [item.get('guid') for item in items_parsed]
+    rss_items = [item for item in rss_root.find('channel').findall('item') if
+                 item.get('guid') is not None]
+    rss_dict = {item.get('guid'): item for item in rss_items}
     alert_update = False
     archive_fp = config.get("archive_file")
-    if (archive_fp is None or not os.path.isfile(archive_fp)):
+    if ((archive_fp is None or not os.path.isfile(archive_fp)) and
+        len(rss_items) > 0):
         alert_update = True
     else:
         with open(archive_fp, "r") as f:
             archive_dat = json.load(f)
         archive_guid = archive_dat.keys()
-        miss_guid = [guid not in archive_guid for guid in items_guid]
-        alert_update = False if sum(miss_guid) == 0 else True
+        rss_items_new = [item for item in rss_items if item.get('guid') not
+                         in archive_guid]
+        alert_update = False if len(rss_items_new) == 0 else True
     if alert_update:
+        items_parsed = [parse_item(item) for item in rss_items_new]
         sum_p = summary_post(items_parsed, now_time, shp_data=shp_data)
         tid = None
         if debug:
@@ -324,7 +327,11 @@ def main(config, debug=False):
             if debug:
                 print("Saving to {}".format(archive_fp))
             with open(archive_fp, "w") as f:
-                json.dump(items_dict, fp=f)
+                #json.dump(items_dict, fp=f)
+                json.dump(rss_dict, fp=f)
+    elif alert_update and len(items_parsed) == 0:
+        if debug:
+            print("No warnings")
     else:
         if debug:
             print("No change in archive file, skipping")
