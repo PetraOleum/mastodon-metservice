@@ -287,20 +287,32 @@ def main(config, debug=False):
     now_time = dt.datetime.now().astimezone(bottz)
     rss_root = load_rss(cap_url)
     rss_items = [item for item in rss_root.find('channel').findall('item') if
-                 item.get('guid') is not None]
-    rss_dict = {item.get('guid'): item for item in rss_items}
+                 item.find('guid') is not None]
+    it = rss_root.find('channel').findall('item')
+    rss_dict = {item.find('guid').text: {"description":
+                                         item.find('description').text, "link":
+                                         item.find('link').text, "guid":
+                                         item.find('guid').text} for item in rss_items}
     alert_update = False
     archive_fp = config.get("archive_file")
     if ((archive_fp is None or not os.path.isfile(archive_fp)) and
         len(rss_items) > 0):
         alert_update = True
+        rss_items_new = rss_items
     else:
-        with open(archive_fp, "r") as f:
-            archive_dat = json.load(f)
-        archive_guid = archive_dat.keys()
-        rss_items_new = [item for item in rss_items if item.get('guid') not
-                         in archive_guid]
-        alert_update = False if len(rss_items_new) == 0 else True
+        try:
+            with open(archive_fp, "r") as f:
+                archive_dat = json.load(f)
+            archive_guid = archive_dat.keys()
+            rss_items_new = [item for item in rss_items if item.find('guid').text not
+                             in archive_guid]
+            alert_update = False if len(rss_items_new) == 0 else True
+        except Exception as e:
+            print("Archive error")
+            print(e)
+            print(type(e))
+            rss_items_new = rss_items
+            alert_update = True if len(rss_items) > 0 else False
     if alert_update:
         items_parsed = [parse_item(item) for item in rss_items_new]
         sum_p = summary_post(items_parsed, now_time, shp_data=shp_data)
