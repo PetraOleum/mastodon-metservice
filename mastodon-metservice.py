@@ -15,17 +15,12 @@ import json
 from mastodon import Mastodon
 
 
-# Non-interactive END
-
-
 def add_polys(items, shpfile, fname, alpha=1):
     try:
         shp_crs = shpfile.crs
         fig = plt.figure()
-        ax  = fig.add_axes((0,0,1,1))
-        #fig, ax = plt.subplots()
-        #ax.set_aspect('equal')
-        shp_plt = shpfile.plot(ax = ax, color = '#FFFFCC',
+        ax = fig.add_axes((0, 0, 1, 1))
+        shp_plt = shpfile.plot(ax=ax, color='#FFFFCC',
                                edgecolor=None)
         ax.set_facecolor('#80ccff')
         ax.set_axis_off()
@@ -40,8 +35,8 @@ def add_polys(items, shpfile, fname, alpha=1):
                 poly_p_str = poly.split(" ")
                 poly_P = Polygon([list(reversed(ply.split(","))) for ply in
                                   poly_p_str])
-                poly_df = geopandas.GeoDataFrame(crs = "wgs84",
-                                                 geometry =
+                poly_df = geopandas.GeoDataFrame(crs="wgs84",
+                                                 geometry=
                                                  [poly_P],
                                                  index=[0])
                 poly_df.to_crs(shp_crs, inplace=True)
@@ -341,7 +336,6 @@ def main(config, debug=False):
             if debug:
                 print("Saving to {}".format(archive_fp))
             with open(archive_fp, "w") as f:
-                #json.dump(items_dict, fp=f)
                 json.dump(rss_dict, fp=f)
     elif alert_update and len(items_parsed) == 0:
         if debug:
@@ -349,6 +343,7 @@ def main(config, debug=False):
     else:
         if debug:
             print("No change in archive file, skipping")
+
 
 # Default args for interactive debugging:
 conf_default = {
