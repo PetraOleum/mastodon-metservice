@@ -32,21 +32,23 @@ def add_polys(items, shpfile, fname, alpha=1):
         ax.add_artist(ax.patch)
         ax.patch.set_zorder(-1)
         for pitem in items:
-            poly = Polygon([list(reversed(ply.split(",")))
-                            for ply in pitem["polygon"]])
             poly_colour = pitem.get("ColourCodeHex")
             poly_colour = (pitem.get('ColourCode') if poly_colour is None else
                            poly_colour)
             poly_colour = "gray" if poly_colour is None else poly_colour
-            poly_df = geopandas.GeoDataFrame(crs = "wgs84",
-                                             geometry =
-                                             [poly],
-                                             index=[0])
-            poly_df.to_crs(shp_crs, inplace=True)
-            weather_plt = poly_df.plot(ax=ax,
-                                       color = poly_colour,
-                                       edgecolor = None,
-                                       aspect=1, alpha=alpha)
+            for poly in pitem.get("polygons"):
+                poly_p_str = poly.split(" ")
+                poly_P = Polygon([list(reversed(ply.split(","))) for ply in
+                                  poly_p_str])
+                poly_df = geopandas.GeoDataFrame(crs = "wgs84",
+                                                 geometry =
+                                                 [poly_P],
+                                                 index=[0])
+                poly_df.to_crs(shp_crs, inplace=True)
+                weather_plt = poly_df.plot(ax=ax,
+                                           color = poly_colour,
+                                           edgecolor = None,
+                                           aspect=1, alpha=alpha)
         fig.savefig(fname, bbox_inches='tight', pad_inches = 0, dpi=200)
         return(fname)
     except Exception as e:
@@ -105,7 +107,7 @@ def get_cap(link):
             "instruction": info.find('instruction', ns).text,
             "areaDesc": (area.find('areaDesc', ns).text if area
                          is not None else None),
-            "polygon": (area.find('polygon', ns).text.split(" ") if area is not
+            "polygons": ([poly.text for poly in area.findall('polygon', ns)] if area is not
                         None else None),
             "web": info.find('web', ns).text
         }
