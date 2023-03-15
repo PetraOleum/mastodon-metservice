@@ -102,8 +102,8 @@ def get_cap(link):
             "instruction": info.find('instruction', ns).text,
             "areaDesc": (area.find('areaDesc', ns).text if area
                          is not None else None),
-            "polygons": ([poly.text for poly in area.findall('polygon', ns)] if area is not
-                        None else None),
+            "polygons": ([poly.text for poly in area.findall('polygon', ns)]
+                         if area is not None else None),
             "web": info.find('web', ns).text
         }
         params = [param for param in info.findall('parameter', ns) if param is
@@ -289,7 +289,8 @@ def main(config, debug=False):
     rss_dict = {item.find('guid').text: {"description":
                                          item.find('description').text, "link":
                                          item.find('link').text, "guid":
-                                         item.find('guid').text} for item in rss_items}
+                                         item.find('guid').text}
+                for item in rss_items}
     alert_update = False
     archive_fp = config.get("archive_file")
     if ((archive_fp is None or not os.path.isfile(archive_fp)) and
@@ -301,8 +302,9 @@ def main(config, debug=False):
             with open(archive_fp, "r") as f:
                 archive_dat = json.load(f)
             archive_guid = archive_dat.keys()
-            rss_items_new = [item for item in rss_items if item.find('guid').text not
-                             in archive_guid]
+            rss_items_new = [item for item in rss_items
+                             if item.find('guid').text
+                             not in archive_guid]
             alert_update = False if len(rss_items_new) == 0 else True
         except Exception as e:
             print("Archive error")
