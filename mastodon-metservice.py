@@ -160,8 +160,8 @@ def item_post(pitem, tz, shp_data, time_fmt="%-I:%M %p %a %-d %b",
     try:
         CW_items = [
             pitem.get('headline'),
-            pitem.get('areaDesc'),
-            pitem.get('certainty')
+            pitem.get('areaDesc')
+            #pitem.get('certainty')
         ]
         CW_items = [cwitem for cwitem in CW_items
                     if cwitem is not None]
