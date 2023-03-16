@@ -15,7 +15,7 @@ import json
 from mastodon import Mastodon
 
 
-def add_polys(items, shpfile, fname, alpha=1):
+def add_polys(items, shpfile, fname, alpha=1, title = None):
     try:
         shp_crs = shpfile.crs
         fig = plt.figure()
@@ -44,10 +44,22 @@ def add_polys(items, shpfile, fname, alpha=1):
                                            color = poly_colour,
                                            edgecolor = None,
                                            aspect=1, alpha=alpha)
+        if title is not None:
+            t_text = "{1} ({0})".format(len(items), title.title())
+            ax.set_title(" " + t_text, y = 1,
+                         pad = -13, loc = 'left')
+        else:
+            t_text = None
         fig.savefig(fname, bbox_inches='tight', pad_inches = 0, dpi=200)
-        return(fname)
+        return(
+            {
+                "file": fname,
+                "title": t_text
+            }
+        )
     except Exception as e:
-        print("Polygon error")
+        error_time = dt.datetime.now().astimezone(None).strftime("%c %Z")
+        print(f"Polygon error at {error_time}")
         print(e)
         return None
 
@@ -59,7 +71,8 @@ def load_rss(url):
             return None
         return ET.fromstring(r.text)
     except Exception as e:
-        print("RSS download error")
+        error_time = dt.datetime.now().astimezone(None).strftime("%c %Z")
+        print(f"RSS download error at {error_time}")
         print(url)
         print(type(e))
         print(e.args)
@@ -73,7 +86,8 @@ def get_cap(link):
         if r.status_code != 200:
             return None
     except Exception as e:
-        print("CAP download error")
+        error_time = dt.datetime.now().astimezone(None).strftime("%c %Z")
+        print(f"CAP download error at {error_time}")
         print(link)
         print(type(e))
         print(e.args)
@@ -113,7 +127,8 @@ def get_cap(link):
                          param.find('value', ns).text
                          for param in params})
     except Exception as e:
-        print("Parsing error")
+        error_time = dt.datetime.now().astimezone(None).strftime("%c %Z")
+        print(f"Parsing error at {error_time}")
         print(link)
         print(type(e))
         print(e.args)
@@ -132,7 +147,8 @@ def parse_item(item):
             "link": item.find("link").text
         }
     except Exception as e:
-        print("Parse error")
+        error_time = dt.datetime.now().astimezone(None).strftime("%c %Z")
+        print(f"Parse error at {error_time}")
         print(e)
         return None
     item_structure.update(get_cap(item_structure.get("link")))
@@ -175,20 +191,22 @@ def item_post(pitem, tz, shp_data, time_fmt="%-I:%M %p %a %-d %b",
             #web
         ]
         text = "\n".join([txt for txt in text_items if txt is not None])
+        CW_len = 0 if CW_text is None else len(CW_text)
         text_len = len(text)
-        if text_len > instance_len:
-            text = text[:(instance_len - 1)] + "…"
-        elif text_len < instance_len - linklength:
+        if (CW_len + text_len) > instance_len:
+            text = text[:(instance_len - CW_len - 1)] + "…"
+        elif (CW_len + text_len) < instance_len - linklength:
             text = text + "\n" + web
         mapfile = add_polys([pitem], shp_data, fname="alert.png")
         return {
             "CW": CW_text,
             "Post": text,
-            "Map": mapfile,
+            "Map": [mapfile],
             "guid": pitem.get('guid')
         }
     except Exception as e:
-        print("Post construction error")
+        error_time = dt.datetime.now().astimezone(None).strftime("%c %Z")
+        print(f"Post construction error at {error_time}")
         print(pitem.get('guid'))
         print(e)
         return None
@@ -228,16 +246,49 @@ def summary_post(items, now_time, shp_data):
         post_text = "\n".join([
             time_text, sev_text, event_text, cert_text, ongoing_text
         ])
-        map_fname = add_polys(items, shp_data, fname="all.png", alpha=0.9)
-        if map_fname is not None:
+        event_types = [k for k in events_c.keys() if k is not None]
+        event_types.sort(key = lambda k: -events_c[k])
+        n_event_types = len(event_types)
+        if n_event_types == 0:
+            map_fnames = []
+        elif n_event_types == 1:
+            map_fnames = [add_polys(items, shp_data, fname="all.png",
+                                    alpha=0.9, title=None)]
+        elif n_event_types <= 4:
+            map_fnames = [
+                add_polys([
+                    item for item in items if item.get('event') == value
+                ], shp_data, fname="all_{}.png".format(count), alpha = 0.9,
+                    title = value) for count, value in enumerate(event_types)
+            ]
+        else:
+            first_3 = event_types[:3]
+            map_fnames = [
+                add_polys([
+                    item for item in items if item.get('event') == value
+                ], shp_data, fname="all_{}.png".format(count), alpha = 0.9,
+                    title = value) for count, value in enumerate(first_3)
+            ]
+            other_map = [
+                add_polys([
+                    item for item in items if item.get('event') not in first_3
+                ], shp_data, fname="all_other.png", alpha = 0.9,
+                    title = "Other")
+            ]
+            map_fnames = map_fnames + other_map
+        map_fnames = [fn for fn in map_fnames if fn is not None]
+        if len(map_fnames) == 1:
             post_text = post_text + "\nMap:"
+        elif len(map_fnames) > 1:
+            post_text = post_text + "\nMaps:"
         return {
             "CW": CW,
             "Post": post_text,
-            "Map": map_fname
+            "Map": map_fnames
         }
     except Exception as e:
-        print("Summary post construction error")
+        error_time = dt.datetime.now().astimezone(None).strftime("%c %Z")
+        print(f"Summary post construction error at {error_time}")
         print(type(e))
         print(e)
         return None
@@ -245,23 +296,37 @@ def summary_post(items, now_time, shp_data):
 
 def make_post(content, mastodon, visibility, threadid=None):
     try:
-        map_file = content.get("Map")
-        if map_file is not None and os.path.isfile(map_file):
-            media_id = mastodon.media_post(map_file, description =
-                                           content.get('CW'))
-        else:
-            media_id = None
+        map_files = content.get("Map")
+        media_ids = [
+            mastodon.media_post(map_file.get('file'), description =
+                                content.get('CW') + (
+                                    "" if map_file.get('title') is None else
+                                    " - {}".format(map_file.get('title'))
+                                ))
+            for map_file in map_files if map_file is not None and
+            map_file.get('file') is not None and
+            os.path.isfile(map_file.get('file'))
+        ]
         nthreadid = mastodon.status_post(content.get("Post"),
                                          in_reply_to_id=threadid,
-                                         media_ids=media_id,
+                                         media_ids=media_ids,
                                          spoiler_text=content.get("CW"),
                                          sensitive=False,
                                          visibility=visibility).get("id")
         return nthreadid
     except Exception as e:
-        print("Posting error")
+        error_time = dt.datetime.now().astimezone(None).strftime("%c %Z")
+        print(f"Posting error at {error_time}")
         print(type(e))
         print(e)
+        print(content)
+        cw_c = content.get("CW")
+        cw_c = "" if cw_c is None else cw_c
+        post_c = content.get("Post")
+        print("CW Len: {}; utf8: {}".format(len(cw_c),
+                                         len(cw_c.encode("utf-8"))))
+        print("Len: {}; utf8: {}".format(len(post_c),
+                                         len(post_c.encode("utf-8"))))
         return threadid
 
 
@@ -272,7 +337,8 @@ def main(config, debug=False):
     else:
         mast_usr = Mastodon(
             access_token = config.get("mastodon_cred"),
-            api_base_url = config.get("mastodon_server")
+            api_base_url = config.get("mastodon_server"),
+            ratelimit_method = 'wait'
         )
     cap_url = config.get('rss_url')
     shp_data = geopandas.read_file(config.get('shape_file'))
@@ -307,7 +373,8 @@ def main(config, debug=False):
                              not in archive_guid]
             alert_update = False if len(rss_items_new) == 0 else True
         except Exception as e:
-            print("Archive error")
+            error_time = dt.datetime.now().astimezone(None).strftime("%c %Z")
+            print(f"Archive error at {error_time}")
             print(e)
             print(type(e))
             rss_items_new = rss_items
