@@ -380,6 +380,13 @@ def main(config, debug=False):
             rss_items_new = rss_items
             alert_update = True if len(rss_items) > 0 else False
     if alert_update:
+        if archive_fp is not None:
+            if debug:
+                print("Saving to {}".format(archive_fp))
+            with open(archive_fp, "w") as f:
+                json.dump(rss_dict, fp=f)
+            if debug:
+                print("Saved")
         items_parsed = [parse_item(item) for item in rss_items_new]
         sum_p = summary_post(items_parsed, now_time, shp_data=shp_data)
         tid = None
@@ -397,15 +404,8 @@ def main(config, debug=False):
                 tid = make_post(item_p, mast_usr,
                                 visibility=config.get('visibility'),
                                 threadid=tid)
-        items_dict = {item.get("guid") : item
-                      for item in items_parsed
-                      if item is not None and
-                      item.get("guid") is not None}
-        if archive_fp is not None:
-            if debug:
-                print("Saving to {}".format(archive_fp))
-            with open(archive_fp, "w") as f:
-                json.dump(rss_dict, fp=f)
+        if debug:
+            print("Done")
     elif alert_update and len(items_parsed) == 0:
         if debug:
             print("No warnings")
