@@ -6,6 +6,7 @@ from dateutil.tz import gettz
 from pprint import pprint
 import geopandas
 import matplotlib.pyplot as plt
+from matplotlib import colors
 from shapely.geometry import Polygon
 from collections import Counter
 from time import sleep
@@ -13,6 +14,72 @@ import argparse
 import os
 import json
 from mastodon import Mastodon
+import contextily as cx
+from math import log2, floor
+
+
+def add_polys_basemap(items, basemap, fname, alpha=1, edge_alpha=1, title = None):
+    try:
+        #shp_crs = shpfile.crs
+        fig = plt.figure()
+        ax = fig.add_axes((0, 0, 1, 1))
+        #shp_plt = shpfile.plot(ax=ax, color='#FFFFCC',
+        #                       edgecolor=None)
+        #ax.set_facecolor('#80ccff')
+        ax.set_axis_off()
+        ax.add_artist(ax.patch)
+        ax.patch.set_zorder(-1)
+        lon_deg_min = 360*10
+        lon_deg_max = -360*10
+        lat_deg_min = 360*10
+        lat_deg_max = -360*10
+        for pitem in items:
+            poly_colour = pitem.get("ColourCodeHex")
+            poly_colour = (pitem.get('ColourCode') if poly_colour is None else
+                           poly_colour)
+            poly_colour = "gray" if poly_colour is None else poly_colour
+            for poly in pitem.get("polygons"):
+                poly_p_str = poly.split(" ")
+                poly_P = Polygon([list(reversed(ply.split(","))) for ply in
+                                  poly_p_str])
+                lon_deg_min = min(lon_deg_min, poly_P.bounds[0] % 360)
+                lon_deg_max = max(lon_deg_max, poly_P.bounds[2] % 360)
+                lat_deg_min = min(lat_deg_min, poly_P.bounds[1])
+                lat_deg_max = max(lat_deg_max, poly_P.bounds[3])
+                poly_df = geopandas.GeoDataFrame(crs="wgs84",
+                                                 geometry=
+                                                 [poly_P],
+                                                 index=[0])
+                poly_df.to_crs(epsg=3857, inplace=True)
+                weather_plt = poly_df.plot(ax=ax,
+                                           color = poly_colour,
+                                           edgecolor=(
+                                               colors.to_rgb(poly_colour)
+                                               +(edge_alpha,)),
+                                           aspect=1, alpha=alpha)
+        if title is not None:
+            t_text = "{1} ({0})".format(len(items), title.title())
+            ax.set_title(" " + t_text, y = 1,
+                         pad = -13, loc = 'left')
+        else:
+            t_text = None
+        lon_deg_diff = (lon_deg_max - lon_deg_min)
+        lat_deg_diff = (lat_deg_max - lat_deg_min)*1.5
+        zoom_level = round(-log2(max(lon_deg_diff, lat_deg_diff)/360))
+        cx.add_basemap(ax, source=basemap, zoom=zoom_level+1)
+        fig.savefig(fname, bbox_inches='tight', pad_inches = 0, dpi=120)
+        plt.close(fig)
+        return(
+            {
+                "file": fname,
+                "title": t_text
+            }
+        )
+    except Exception as e:
+        error_time = dt.datetime.now().astimezone(None).strftime("%c %Z")
+        print(f"Polygon error at {error_time}")
+        print(e)
+        return None
 
 
 def add_polys(items, shpfile, fname, alpha=1, title = None):
@@ -197,7 +264,8 @@ def item_post(pitem, tz, shp_data, time_fmt="%-I:%M %p %a %-d %b",
             text = text[:(instance_len - CW_len - 1)] + "…"
         elif (CW_len + text_len) < instance_len - linklength:
             text = text + "\n" + web
-        mapfile = add_polys([pitem], shp_data, fname="alert.png")
+        mapfile = add_polys_basemap([pitem], cx.providers.OpenStreetMap.Mapnik,
+                                    fname="alert.png", alpha=0.5)
         return {
             "CW": CW_text,
             "Post": text,
