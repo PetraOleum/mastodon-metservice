@@ -133,7 +133,7 @@ def add_polys(items, shpfile, fname, alpha=1, title = None):
 
 def load_rss(url):
     try:
-        r = requests.get(url)
+        r = requests.get(url, timeout=10)
         if r.status_code != 200:
             return None
         return ET.fromstring(r.text)
@@ -149,7 +149,7 @@ def load_rss(url):
 
 def get_cap(link):
     try:
-        r = requests.get(link)
+        r = requests.get(link, timeout=10)
         if r.status_code != 200:
             return None
     except Exception as e:
