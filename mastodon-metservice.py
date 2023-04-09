@@ -462,7 +462,7 @@ def main(config, debug=False):
             pprint(sum_p)
         else:
             tid = make_post(sum_p, mast_usr,
-                            visibility=config.get('secondary_visibility'))
+                            visibility=config.get('visibility'))
         for item in items_parsed:
             sleep(config.get("wait"))
             item_p = item_post(item, tz=bottz, shp_data=shp_data)
@@ -470,7 +470,7 @@ def main(config, debug=False):
                 pprint(item_p)
             else:
                 tid = make_post(item_p, mast_usr,
-                                visibility=config.get('visibility'),
+                                visibility=config.get('secondary_visibility'),
                                 threadid=tid)
         if debug:
             print("Done")
