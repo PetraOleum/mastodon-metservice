@@ -34,7 +34,8 @@ The config file is at `config.json` although another file can be specified with 
 * `archive_file`: JSON file used to save the most recently updated information - currently only used for the list of guids for comparison with most recent rss load
 * `mastodon_server`: URL of the mastodon server the account is located on
 * `mastodon_cred`: file path to the user secret file for the bot; can also just contain the secret directly (not recommended)
-* `visibility`: Post visibility on mastodon, one of 'public', 'unlisted', 'private', or 'direct'
+* `visibility`: Post visibility on mastodon, one of 'public', 'unlisted', 'private', or 'direct', for the main (summary) post
+* `secondary_visibility`: Post visibility of replies to the main post, i.e. details of individual warnings and watches. Recommended to be unlisted.
 
 # Adapting
 

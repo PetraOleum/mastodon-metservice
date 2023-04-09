@@ -462,7 +462,7 @@ def main(config, debug=False):
             pprint(sum_p)
         else:
             tid = make_post(sum_p, mast_usr,
-                            visibility=config.get('visibility'))
+                            visibility=config.get('secondary_visibility'))
         for item in items_parsed:
             sleep(config.get("wait"))
             item_p = item_post(item, tz=bottz, shp_data=shp_data)
@@ -494,7 +494,8 @@ conf_default = {
     "archive_file": "archive.json",
     "mastodon_server": "https://botsin.space",
     "mastodon_cred": "nzweather_usercred.secret",
-    "visibility": "direct"
+    "visibility": "direct",
+    "secondary_visibility": "direct"
 }
 
 if __name__ == "__main__":

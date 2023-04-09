@@ -9,5 +9,6 @@
     "archive_file": "archive.json",
     "mastodon_server": "https://botsin.space",
     "mastodon_cred": "nzweather_usercred.secret",
-    "visibility": "direct"
+    "visibility": "direct",
+    "secondary_visibility": "direct"
 }
