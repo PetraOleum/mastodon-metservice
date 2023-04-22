@@ -52,11 +52,12 @@ def add_polys_basemap(items, basemap, fname, alpha=1, edge_alpha=1, title = None
                                                  index=[0])
                 poly_df.to_crs(epsg=3857, inplace=True)
                 weather_plt = poly_df.plot(ax=ax,
-                                           color = poly_colour,
+                                           color = (colors.to_rgb(poly_colour)
+                                                   +(alpha,)),
                                            edgecolor=(
                                                colors.to_rgb(poly_colour)
                                                +(edge_alpha,)),
-                                           aspect=1, alpha=alpha)
+                                           aspect=1)
         if title is not None:
             t_text = "{1} ({0})".format(len(items), title.title())
             ax.set_title(" " + t_text, y = 1,
@@ -82,7 +83,7 @@ def add_polys_basemap(items, basemap, fname, alpha=1, edge_alpha=1, title = None
         return None
 
 
-def add_polys(items, shpfile, fname, alpha=1, title = None):
+def add_polys(items, shpfile, fname, alpha=1, edge_alpha=1, title = None):
     try:
         shp_crs = shpfile.crs
         fig = plt.figure()
@@ -108,9 +109,13 @@ def add_polys(items, shpfile, fname, alpha=1, title = None):
                                                  index=[0])
                 poly_df.to_crs(shp_crs, inplace=True)
                 weather_plt = poly_df.plot(ax=ax,
-                                           color = poly_colour,
-                                           edgecolor = None,
-                                           aspect=1, alpha=alpha)
+                                           color = (
+                                               colors.to_rgb(poly_colour) +
+                                               (alpha,)),
+                                           edgecolor=(
+                                           colors.to_rgb(poly_colour)
+                                           +(edge_alpha,)),
+                                           aspect=1)
         if title is not None:
             t_text = "{1} ({0})".format(len(items), title.title())
             ax.set_title(" " + t_text, y = 1,
@@ -321,13 +326,14 @@ def summary_post(items, now_time, shp_data):
             map_fnames = []
         elif n_event_types == 1:
             map_fnames = [add_polys(items, shp_data, fname="all.png",
-                                    alpha=0.9, title=None)]
+                                    alpha=0.9, edge_alpha=0.5, title=None)]
         elif n_event_types <= 4:
             map_fnames = [
                 add_polys([
                     item for item in items if item.get('event') == value
                 ], shp_data, fname="all_{}.png".format(count), alpha = 0.9,
-                    title = value) for count, value in enumerate(event_types)
+                    edge_alpha=0.5, title = value)
+                for count, value in enumerate(event_types)
             ]
         else:
             first_3 = event_types[:3]
@@ -335,13 +341,14 @@ def summary_post(items, now_time, shp_data):
                 add_polys([
                     item for item in items if item.get('event') == value
                 ], shp_data, fname="all_{}.png".format(count), alpha = 0.9,
-                    title = value) for count, value in enumerate(first_3)
+                    edge_alpha=0.5, title = value)
+                for count, value in enumerate(first_3)
             ]
             other_map = [
                 add_polys([
                     item for item in items if item.get('event') not in first_3
                 ], shp_data, fname="all_other.png", alpha = 0.9,
-                    title = "Other")
+                    edge_alpha=0.0, title = "Other")
             ]
             map_fnames = map_fnames + other_map
         map_fnames = [fn for fn in map_fnames if fn is not None]
