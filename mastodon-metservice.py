@@ -71,9 +71,12 @@ def add_polys_basemap(items, basemap, fname, alpha=1, edge_alpha=1, title = None
         lat_deg_max = multy_pgon.bounds[3]
         lon_deg_diff = (lon_deg_max - lon_deg_min)
         lat_deg_diff = (lat_deg_max - lat_deg_min)
-        zoom_level_lon = -round(log2(lon_deg_diff/lon_deg_range))
-        zoom_level_lat = -round(log2(lat_deg_diff/(lat_deg_range*lat_distortion)))
-        zoom_level = min(zoom_level_lon, zoom_level_lat) + 1
+        zoom_level_lon = -log2(lon_deg_diff/lon_deg_range)
+        zoom_level_lat = -log2(lat_deg_diff/(lat_deg_range*lat_distortion))
+        zoom_level = round((zoom_level_lon + zoom_level_lat)/2) + 1
+        #zoom_level_lon = -round(log2(lon_deg_diff/lon_deg_range))
+        #zoom_level_lat = -round(log2(lat_deg_diff/(lat_deg_range*lat_distortion)))
+        #zoom_level = min(zoom_level_lon, zoom_level_lat) + 1
         lon_pixels = 256 * lon_deg_diff / (lon_deg_range / (2**zoom_level))
         lon_inch = lon_pixels / dpi
         lat_pixels = 256 * lat_deg_diff / (lat_deg_range / ((2**zoom_level) /
@@ -137,14 +140,9 @@ def add_polys(items, shpfile, fname, alpha=1, edge_alpha=1, title = None):
         ax.add_artist(ax.patch)
         ax.patch.set_zorder(-1)
         for pitem in items:
-            poly_colour = pitem.get("ColourCodeHex")
-            poly_colour = (pitem.get('ColourCode') if poly_colour is None else
-                           poly_colour)
-            poly_colour = "gray" if poly_colour is None else poly_colour
+            poly_colour = item_colour(pitem)
             for poly in pitem.get("polygons"):
-                poly_p_str = poly.split(" ")
-                poly_P = Polygon([list(reversed(ply.split(","))) for ply in
-                                  poly_p_str])
+                poly_P = poly_from_string(poly, centre_180=True)
                 poly_df = geopandas.GeoDataFrame(crs="wgs84",
                                                  geometry=
                                                  [poly_P],
