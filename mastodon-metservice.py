@@ -7,7 +7,7 @@ from pprint import pprint
 import geopandas
 import matplotlib.pyplot as plt
 from matplotlib import colors
-from shapely.geometry import Polygon
+from shapely.geometry import Polygon, MultiPolygon
 from collections import Counter
 from time import sleep
 import argparse
@@ -15,13 +15,72 @@ import os
 import json
 from mastodon import Mastodon
 import contextily as cx
-from math import log2, floor
+from math import log2, floor, log, pi, tan, cos
+
+def item_colour(item):
+    colour = item.get("ColourCodeHex")
+    if colour is not None:
+        return colour
+    colour = item.get('ColourCode')
+    if colour is not None:
+        return colour
+    return "gray"
+
+
+def poly_from_string(string, centre_180=True):
+    points_str = string.split(" ")
+    if centre_180:
+        pgon = Polygon([
+            (float(ply.split(",")[1]) % 360, float(ply.split(",")[0]))
+            for ply in points_str
+        ])
+    else:
+        pgon = Polygon([
+            (float(ply.split(",")[1]), float(ply.split(",")[0]))
+            for ply in points_str
+        ])
+    return pgon
 
 
 def add_polys_basemap(items, basemap, fname, alpha=1, edge_alpha=1, title = None):
     try:
+        dpi = 120
+        pad_inches = 0
+        #lat_deg_range = 85.051129 * 2
+        lat_deg_range = 180
+        lon_deg_range = 360
+        poly_data = [
+            {
+                "colour": item_colour(pitem),
+                "polygons": [
+                    poly_from_string(poly_string, centre_180=True)
+                    for poly_string in pitem.get("polygons")
+                ]
+            }
+            for pitem in items
+        ]
+        multy_pgon = MultiPolygon([
+            pgon for polyset in poly_data
+            for pgon in polyset.get("polygons")
+        ])
+        lat_centroid = multy_pgon.centroid.y
+        lat_distortion = 1/cos(lat_centroid * pi / 180)
+        lon_deg_min = multy_pgon.bounds[0]
+        lon_deg_max = multy_pgon.bounds[2]
+        lat_deg_min = multy_pgon.bounds[1]
+        lat_deg_max = multy_pgon.bounds[3]
+        lon_deg_diff = (lon_deg_max - lon_deg_min)
+        lat_deg_diff = (lat_deg_max - lat_deg_min)
+        zoom_level_lon = -round(log2(lon_deg_diff/lon_deg_range))
+        zoom_level_lat = -round(log2(lat_deg_diff/(lat_deg_range*lat_distortion)))
+        zoom_level = min(zoom_level_lon, zoom_level_lat) + 1
+        lon_pixels = 256 * lon_deg_diff / (lon_deg_range / (2**zoom_level))
+        lon_inch = lon_pixels / dpi
+        lat_pixels = 256 * lat_deg_diff / (lat_deg_range / ((2**zoom_level) /
+                                           lat_distortion))
+        lat_inch = lat_pixels / dpi
         #shp_crs = shpfile.crs
-        fig = plt.figure()
+        fig = plt.figure(figsize = (lon_inch, lat_inch))
         ax = fig.add_axes((0, 0, 1, 1))
         #shp_plt = shpfile.plot(ax=ax, color='#FFFFCC',
         #                       edgecolor=None)
@@ -29,23 +88,9 @@ def add_polys_basemap(items, basemap, fname, alpha=1, edge_alpha=1, title = None
         ax.set_axis_off()
         ax.add_artist(ax.patch)
         ax.patch.set_zorder(-1)
-        lon_deg_min = 360*10
-        lon_deg_max = -360*10
-        lat_deg_min = 360*10
-        lat_deg_max = -360*10
-        for pitem in items:
-            poly_colour = pitem.get("ColourCodeHex")
-            poly_colour = (pitem.get('ColourCode') if poly_colour is None else
-                           poly_colour)
-            poly_colour = "gray" if poly_colour is None else poly_colour
-            for poly in pitem.get("polygons"):
-                poly_p_str = poly.split(" ")
-                poly_P = Polygon([list(reversed(ply.split(","))) for ply in
-                                  poly_p_str])
-                lon_deg_min = min(lon_deg_min, poly_P.bounds[0] % 360)
-                lon_deg_max = max(lon_deg_max, poly_P.bounds[2] % 360)
-                lat_deg_min = min(lat_deg_min, poly_P.bounds[1])
-                lat_deg_max = max(lat_deg_max, poly_P.bounds[3])
+        for pgroup in poly_data:
+            poly_colour = pgroup.get("colour")
+            for poly_P in pgroup.get("polygons"):
                 poly_df = geopandas.GeoDataFrame(crs="wgs84",
                                                  geometry=
                                                  [poly_P],
@@ -64,11 +109,8 @@ def add_polys_basemap(items, basemap, fname, alpha=1, edge_alpha=1, title = None
                          pad = -13, loc = 'left')
         else:
             t_text = None
-        lon_deg_diff = (lon_deg_max - lon_deg_min)
-        lat_deg_diff = (lat_deg_max - lat_deg_min)*1.5
-        zoom_level = round(-log2(max(lon_deg_diff, lat_deg_diff)/360))
-        cx.add_basemap(ax, source=basemap, zoom=zoom_level+1)
-        fig.savefig(fname, bbox_inches='tight', pad_inches = 0, dpi=120)
+        cx.add_basemap(ax, source=basemap, zoom=zoom_level)
+        fig.savefig(fname, bbox_inches='tight', pad_inches=pad_inches, dpi=dpi)
         plt.close(fig)
         return(
             {
