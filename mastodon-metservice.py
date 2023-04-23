@@ -15,7 +15,7 @@ import os
 import json
 from mastodon import Mastodon
 import contextily as cx
-from math import log2, floor, log, pi, tan, cos
+from math import log2, floor, log, pi, cos
 
 def item_colour(item):
     colour = item.get("ColourCodeHex")
@@ -46,7 +46,6 @@ def add_polys_basemap(items, basemap, fname, alpha=1, edge_alpha=1, title = None
     try:
         dpi = 120
         pad_inches = 0
-        #lat_deg_range = 85.051129 * 2
         lat_deg_range = 180
         lon_deg_range = 360
         poly_data = [
@@ -74,20 +73,13 @@ def add_polys_basemap(items, basemap, fname, alpha=1, edge_alpha=1, title = None
         zoom_level_lon = -log2(lon_deg_diff/lon_deg_range)
         zoom_level_lat = -log2(lat_deg_diff/(lat_deg_range*lat_distortion))
         zoom_level = round((zoom_level_lon + zoom_level_lat)/2) + 1
-        #zoom_level_lon = -round(log2(lon_deg_diff/lon_deg_range))
-        #zoom_level_lat = -round(log2(lat_deg_diff/(lat_deg_range*lat_distortion)))
-        #zoom_level = min(zoom_level_lon, zoom_level_lat) + 1
         lon_pixels = 256 * lon_deg_diff / (lon_deg_range / (2**zoom_level))
         lon_inch = lon_pixels / dpi
         lat_pixels = 256 * lat_deg_diff / (lat_deg_range / ((2**zoom_level) /
                                            lat_distortion))
         lat_inch = lat_pixels / dpi
-        #shp_crs = shpfile.crs
         fig = plt.figure(figsize = (lon_inch, lat_inch))
         ax = fig.add_axes((0, 0, 1, 1))
-        #shp_plt = shpfile.plot(ax=ax, color='#FFFFCC',
-        #                       edgecolor=None)
-        #ax.set_facecolor('#80ccff')
         ax.set_axis_off()
         ax.add_artist(ax.patch)
         ax.patch.set_zorder(-1)
