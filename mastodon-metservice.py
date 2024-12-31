@@ -437,7 +437,7 @@ def make_post(content, mastodon, visibility, threadid=None):
         return threadid
 
 
-def main(config, debug=False):
+def main(config, debug=False, ver_checkmode="created"):
     if debug:
         print("Debugging: not posting to mastodon")
         mast_usr = None
@@ -445,7 +445,8 @@ def main(config, debug=False):
         mast_usr = Mastodon(
             access_token = config.get("mastodon_cred"),
             api_base_url = config.get("mastodon_server"),
-            ratelimit_method = 'wait'
+            ratelimit_method = 'wait',
+            version_check_mode = ver_checkmode
         )
     cap_url = config.get('rss_url')
     shp_data = geopandas.read_file(config.get('shape_file'))
@@ -546,9 +547,14 @@ if __name__ == "__main__":
                            dest="debug", action="store_true")
     argparser.add_argument("--dir", default=".", dest="dir",
                         help="Directory to operate in")
+    argparser.add_argument("--no-check-api-version",
+                           help=("Don't check API version. "
+                                 "Useful for other servers like GtS"),
+                           dest="no_check_api", action="store_true")
     args = argparser.parse_args()
     with open(args.config_file, "r") as configfile:
         conf_json = json.load(configfile)
     os.chdir(args.dir)
-    main(conf_json, debug=args.debug)
+    ver_checkmode = "none" if args.no_check_api else "created"
+    main(conf_json, debug=args.debug, ver_checkmode=ver_checkmode)
 
