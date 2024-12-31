@@ -16,6 +16,7 @@ import json
 from mastodon import Mastodon
 import contextily as cx
 from math import log2, floor, log, pi, cos
+import re
 
 def item_colour(item):
     colour = item.get("ColourCodeHex")
@@ -269,8 +270,14 @@ def item_post(pitem, tz, shp_data, time_fmt="%-I:%M %p %a %-d %b",
         ]
         CW_items = [cwitem for cwitem in CW_items
                     if cwitem is not None]
-        CW_text = None if len(CW_items) == 0 else " - ".join(CW_items)
+        CW_text = None if len(CW_items) == 0 else re.sub(
+            r"(,)([A-Za-z])", ", \\2",
+            " - ".join(CW_items))
         desc_text = pitem.get('cap_description')
+        if desc_text is not None:
+            desc_text = re.sub(
+            r"(,)([A-Za-z])", ", \\2",
+            desc_text)
         onset_s = pitem.get('onset')
         onset = (None if onset_s is None else
                  dt.datetime.fromisoformat(onset_s))
