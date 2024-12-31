@@ -261,6 +261,7 @@ def parse_item(item):
 
 def item_post(pitem, tz, shp_data, time_fmt="%-I:%M %p %a %-d %b",
               linklength=23, instance_len = 500):
+    instance_len = 500 if instance_len is None else instance_len
     try:
         CW_items = [
             pitem.get('headline'),
@@ -299,8 +300,6 @@ def item_post(pitem, tz, shp_data, time_fmt="%-I:%M %p %a %-d %b",
         text_len = len(text)
         if (CW_len + text_len) > instance_len:
             text = text[:(instance_len - CW_len - 1)] + "…"
-        elif (CW_len + text_len) < instance_len - linklength:
-            text = text + "\n" + web
         mapfile = add_polys_basemap([pitem], cx.providers.OpenStreetMap.Mapnik,
                                     fname="alert.png", alpha=0.5)
         return {
@@ -339,10 +338,12 @@ def summary_post(items, now_time, shp_data):
             "{} {}".format(value, key)
             for key, value in sev_c.items()
         ])
-        event_text = "Types: " + "; ".join([
-            "{} {}".format(value, key)
+        events_c = Counter(events)
+        event_counts_text = "; ".join([
+            "{} {}".format(value, key.title())
             for key, value in events_c.items()
         ])
+        event_text = "Types: " + event_counts_text
         cert_text = "Certainty: " + "; ".join([
             "{} {}".format(value, key)
             for key, value in certs_c.items()
@@ -354,11 +355,18 @@ def summary_post(items, now_time, shp_data):
         event_types = [k for k in events_c.keys() if k is not None]
         event_types.sort(key = lambda k: -events_c[k])
         n_event_types = len(event_types)
+
+        if n_event_types > 1:
+            CW = "{} ({})".format(CW, event_counts_text)
+        elif n_event_types == 1:
+            CW = "{} ({})".format(CW, event_types[0].title())
+
         if n_event_types == 0:
             map_fnames = []
         elif n_event_types == 1:
             map_fnames = [add_polys(items, shp_data, fname="all.png",
-                                    alpha=0.9, edge_alpha=0.5, title=None)]
+                                    alpha=0.9, edge_alpha=0.5,
+                                    title=event_types[0])]
         elif n_event_types <= 4:
             map_fnames = [
                 add_polys([
@@ -505,7 +513,9 @@ def main(config, debug=False, ver_checkmode="created"):
                             visibility=config.get('visibility'))
         for item in items_parsed:
             sleep(config.get("wait"))
-            item_p = item_post(item, tz=bottz, shp_data=shp_data)
+            item_p = item_post(item, tz=bottz,
+                               shp_data=shp_data,
+                               instance_len=config.get("character_limit"))
             if debug:
                 pprint(item_p)
             else:
@@ -534,6 +544,7 @@ conf_default = {
     "archive_file": "archive.json",
     "mastodon_server": "https://botsin.space",
     "mastodon_cred": "nzweather_usercred.secret",
+    "character_limit": 500,
     "visibility": "direct",
     "secondary_visibility": "direct"
 }
